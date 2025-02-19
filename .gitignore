@@ -1,0 +1,51 @@
+# Ambiente virtual e dependências
+venv/
+.venv/
+env/
+pip-selfcheck.json
+*.pyvenv.cfg
+
+# Arquivos do Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+
+# Configurações e credenciais
+.env
+.flaskenv
+credentials/sa.json
+app/config_local.py
+instance/
+
+# Logs e banco de dados
+*.log
+*.sqlite
+app.log
+
+# IDE/Editores
+.vscode/
+.idea/
+*.sublime-*
+*.swp
+*.swo
+
+# Builds e distribuição
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Testes e cobertura
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+
+# Arquivos específicos do SO
+.DS_Store
+Thumbs.db
+
+# Arquivos temporários
+*.tmp
+*.bak
