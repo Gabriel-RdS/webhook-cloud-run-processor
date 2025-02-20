@@ -24,7 +24,7 @@ curl -X POST https://{URL AQUI}/ \
   -H "Content-Type: application/json" \
   -d '{"url": "https://www.kaggle.com/api/v1/datasets/download/amandamartin62/simulated-transactions-parquet-format"}'
 
-# ----| Arquivo de 7.18gb
+# ----| Arquivo de 10gb
 curl -X POST https://{URL AQUI}/ \
   -H "Content-Type: application/json" \
   -d '{"url": "https://bit.ly/10GbOVHserver"}'

@@ -1,6 +1,6 @@
 from flask import Flask, Response
 from app.config import Config
-from app.routes.webhook import webhook_bp
+from app.routes import webhook, webhook_chunked
 from app.utils.logging import logger
 
 def create_app() -> Flask:
@@ -9,7 +9,8 @@ def create_app() -> Flask:
     app.config.from_object(Config)
     
     # Registra Blueprints
-    app.register_blueprint(webhook_bp)
+    app.register_blueprint(webhook.webhook_bp)
+    app.register_blueprint(webhook_chunked.webhook_chunked_bp)
     
     # Configuração adicional para Cloud Run
     @app.route("/healthcheck")
