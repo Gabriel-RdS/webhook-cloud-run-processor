@@ -1,6 +1,6 @@
 from flask import Flask, Response
 from app.config import Config
-from app.routes import webhook, webhook_chunked
+from app.routes import webhook_stream, webhook_chunked  # Importa os módulos, não os Blueprints diretamente
 from app.utils.logging import logger
 
 def create_app() -> Flask:
@@ -9,7 +9,7 @@ def create_app() -> Flask:
     app.config.from_object(Config)
     
     # Registra Blueprints
-    app.register_blueprint(webhook.webhook_bp)
+    app.register_blueprint(webhook_stream.webhook_stream_bp)
     app.register_blueprint(webhook_chunked.webhook_chunked_bp)
     
     # Configuração adicional para Cloud Run

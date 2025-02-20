@@ -8,9 +8,9 @@ from app.services.file_downloader import safe_download, get_file_extension
 from app.utils.logging import logger
 import uuid
 
-webhook_bp = Blueprint('webhook', __name__)
+webhook_stream_bp = Blueprint('webhook_stream', __name__)
 
-@webhook_bp.before_request
+@webhook_stream_bp.before_request
 def restrict_ip():
     forwarded_for = request.headers.get("X-Forwarded-For")
     ip = forwarded_for.split(",")[0].strip() if forwarded_for else request.remote_addr
@@ -18,8 +18,8 @@ def restrict_ip():
         logger.error(f"IP não autorizado: {ip}")
         abort(403, description="Acesso negado")
 
-@webhook_bp.route("/", methods=["POST"])
-def handle_webhook_route():
+@webhook_stream_bp.route("/webhook_stream", methods=["POST"])
+def handle_webhook_stream_route():
     payload = request.get_json(silent=True) or {}
     if not payload.get("url"):
         logger.error("Requisição sem URL válida")
