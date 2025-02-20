@@ -1,4 +1,4 @@
-# 🚀 Integração de Webhook com Cloud Run
+# Integração de Webhook com Cloud Run
 
 **Processamento seguro de arquivos em tempo real com integração GCP**
 
