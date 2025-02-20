@@ -26,3 +26,19 @@ class GoogleCloudStorage:
         
         logger.info(f"Arquivo {filename} enviado com sucesso.")
         return blob
+    
+    def upload_parquet_chunks(self, stream, filename: str, chunk_size: int = 1024*1024) -> storage.Blob:
+        """Faz upload de um stream de dados Parquet para o GCS em chunks."""
+        blob = self.bucket.blob(filename)
+        blob.content_type = "application/parquet"
+        blob.cache_control = "no-cache, no-store, must-revalidate"
+
+        with blob.open("wb", chunk_size=chunk_size) as f:
+            while True:
+                chunk = stream.read(chunk_size)
+                if not chunk:
+                    break
+                f.write(chunk)
+
+        logger.info(f"Arquivo {filename} enviado em chunks com sucesso.")
+        return blob
