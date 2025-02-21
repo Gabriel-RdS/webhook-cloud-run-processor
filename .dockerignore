@@ -16,8 +16,6 @@ __pycache__/
 *.py[cod]
 
 # Arquivos de ambiente e credenciais
-.env
-.env.example
 credentials/
 *.json
 
