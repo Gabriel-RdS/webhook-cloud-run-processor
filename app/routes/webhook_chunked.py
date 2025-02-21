@@ -8,6 +8,7 @@ from app.utils.logging import logger
 import uuid
 import datetime
 import threading
+import json
 
 webhook_chunked_bp = Blueprint('webhook_chunked', __name__)
 
@@ -29,12 +30,18 @@ def handle_webhook_chunked_route():
     try:
         logger.info("Requisição recebida para processamento em chunks.")
 
+        # Gerar UUID para rastreamento
+        file_uuid = uuid.uuid4().hex
+
+        # Salvar a requisição no GCS
+        save_request_to_gcs(payload, file_uuid)
+
         # Retornar a resposta "202 Accepted"
         response = jsonify({"status": "Processamento iniciado em segundo plano"})
         response.status_code = 202
 
         # Iniciar o processamento em segundo plano
-        threading.Thread(target=process_file, args=(payload,)).start()
+        threading.Thread(target=process_file, args=(payload, file_uuid)).start()
 
         return response
 
@@ -42,7 +49,24 @@ def handle_webhook_chunked_route():
         logger.error(f"Erro ao receber requisição: {e}", exc_info=True)
         abort(500, description="Erro ao receber requisição")
 
-def process_file(payload):
+def save_request_to_gcs(payload, file_uuid):
+    """Salva os detalhes da requisição no GCS."""
+    try:
+        storage_client = GoogleCloudStorage()
+        now = datetime.datetime.now()
+        request_filename = f"staging/insider/requests/{now.year}/{now.month:02}/{now.day:02}/request_{file_uuid}.json"
+
+        # Converter o payload para JSON
+        request_data = json.dumps(payload, indent=2)
+
+        # Fazer upload do JSON para o GCS
+        storage_client.upload_string(request_data, request_filename, content_type='application/json')
+        logger.info(f"Requisição salva em {request_filename}")
+
+    except Exception as e:
+        logger.error(f"Erro ao salvar requisição no GCS: {e}", exc_info=True)
+
+def process_file(payload, file_uuid):
     """Função para processar o arquivo em segundo plano."""
     try:
         storage_client = GoogleCloudStorage()
@@ -59,7 +83,8 @@ def process_file(payload):
             logger.info("Content-Length não informado; monitoramento limitado do progresso.")
 
         extension = get_file_extension(content_type)
-        arquivo_nome = f"staging/insider/{datetime.datetime.now().year}/{datetime.datetime.now().month:02}/{datetime.datetime.now().day:02}/secured_export_{uuid.uuid4().hex}.{extension}"
+        now = datetime.datetime.now()
+        arquivo_nome = f"staging/insider/{now.year}/{now.month:02}/{now.day:02}/secured_export_{file_uuid}.{extension}"
         chunk_size = 256 * 1024 * 1024  # 256MB
 
         logger.info(f"Iniciando upload para o GCS em chunks em {arquivo_nome}")

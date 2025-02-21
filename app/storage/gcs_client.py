@@ -42,3 +42,13 @@ class GoogleCloudStorage:
 
         logger.info(f"Arquivo {filename} enviado em chunks com sucesso.")
         return blob
+    
+    def upload_string(self, data: str, filename: str, content_type: str = "text/plain") -> storage.Blob:
+        """Faz upload de uma string para o GCS."""
+        blob = self.bucket.blob(filename)
+        blob.content_type = content_type
+        blob.cache_control = "no-cache, no-store, must-revalidate"
+        blob.upload_from_string(data, content_type=content_type)
+
+        logger.info(f"String enviada para {filename} com sucesso.")
+        return blob
