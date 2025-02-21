@@ -1,0 +1,41 @@
+# Ambiente virtual
+venv/
+.venv/
+env/
+
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.py[cod]
+
+# Arquivos de ambiente e credenciais
+.env
+.env.example
+credentials/
+*.json
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+app.log
+
+# Testes
+tests/
+htmlcov/
+.coverage
+.pytest_cache/
+
+# Outros
+README.md
+Dockerfile
+.dockerignore
