@@ -66,8 +66,24 @@ INSIDER_API_TOKEN_SECRET="nome-do-secret"
 ENVIRONMENT="development"
 ```
 
-### Instalação Local
+## Instalação Local
+
+### Usando Docker (Recomendado)
+```bash
+# 1. Build da imagem
+docker build -t insider-webhook .
+
+# 2. Executar o container
+docker run -p 8080:8080 \
+  -e BUCKET_NAME="seu-bucket" \
+  -e PROJECT_ID="seu-projeto" \
+  -e ALLOWED_IPS="127.0.0.1" \
+  -e ENVIRONMENT="development" \
+  insider-webhook
 ```
+
+### Usando Python Local
+```bash
 # 1. Clone o repositório
 git clone https://github.com/seu-usuario/webhook-processor.git
 cd webhook-processor
@@ -84,8 +100,23 @@ ENVIRONMENT=development python app.py
 ```
 
 ## Deployment no Cloud Run
+
+### Usando Docker (Recomendado)
+```bash
+# 1. Build e push da imagem para o Container Registry
+gcloud builds submit --tag gcr.io/[PROJECT_ID]/insider-webhook
+
+# 2. Deploy no Cloud Run
+gcloud run deploy insider-webhook \
+  --image gcr.io/[PROJECT_ID]/insider-webhook \
+  --platform managed \
+  --region southamerica-east1 \
+  --allow-unauthenticated \
+  --set-env-vars "ENVIRONMENT=production"
 ```
-# Build e deploy via gcloud CLI
+
+### Usando gcloud CLI Diretamente
+```bash
 gcloud run deploy webhook-processor \
   --source . \
   --region southamerica-east1 \
@@ -121,12 +152,35 @@ curl -X POST http://localhost:8080/webhook_chunked \
 ## Licença
 Distribuído sob licença Apache 2.0. Veja `LICENSE` para mais informações.
 
+## Configuração Docker
+
+O projeto inclui configuração Docker otimizada para produção:
+
+- Imagem base Python 3.11 slim
+- Execução como usuário não-root
+- Otimização de camadas e cache
+- Configuração de variáveis de ambiente
+- Healthcheck integrado
+
+### Variáveis de Ambiente no Container
+```bash
+PYTHONUNBUFFERED=1
+PYTHONDONTWRITEBYTECODE=1
+PIP_NO_CACHE_DIR=1
+PIP_DISABLE_PIP_VERSION_CHECK=1
+```
+
 ## Troubleshooting
 Problemas comuns e soluções:
 - **Erro 403 (Acesso negado)**: Verifique ALLOWED_IPS e X-Forwarded-For
 - **Falha no upload**: Valide permissões do service account no GCS
 - **Falha no processamento em chunks**: Verifique o tamanho dos chunks e a disponibilidade do arquivo remoto
 - **Logs incompletos**: Configure ENVIRONMENT=development para logging em arquivo
+- **Problemas com Docker:**
+  - **Erro de permissão**: Verifique se o usuário tem permissão para acessar o socket do Docker
+  - **Falha no build**: Limpe o cache do Docker com `docker builder prune`
+  - **Container não inicia**: Verifique as variáveis de ambiente necessárias
+  - **Problemas de rede**: Verifique se as portas estão corretamente mapeadas
 
 > [!TIP]
 > Use `make local-env` para subir ambiente com Docker Compose (exemplo no Makefile)
