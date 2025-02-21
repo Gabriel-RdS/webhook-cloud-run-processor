@@ -7,6 +7,7 @@ from app.services.file_downloader import safe_download, LoggingStreamWrapper, ge
 from app.utils.logging import logger
 import uuid
 import datetime
+import threading
 
 webhook_chunked_bp = Blueprint('webhook_chunked', __name__)
 
@@ -26,7 +27,24 @@ def handle_webhook_chunked_route():
         abort(400, description="Parâmetro URL ausente")
 
     try:
-        logger.info("Iniciando processamento do webhook em chunks.")
+        logger.info("Requisição recebida para processamento em chunks.")
+
+        # Retornar a resposta "202 Accepted"
+        response = jsonify({"status": "Processamento iniciado em segundo plano"})
+        response.status_code = 202
+
+        # Iniciar o processamento em segundo plano
+        threading.Thread(target=process_file, args=(payload,)).start()
+
+        return response
+
+    except Exception as e:
+        logger.error(f"Erro ao receber requisição: {e}", exc_info=True)
+        abort(500, description="Erro ao receber requisição")
+
+def process_file(payload):
+    """Função para processar o arquivo em segundo plano."""
+    try:
         storage_client = GoogleCloudStorage()
         url = payload["url"]
 
@@ -49,8 +67,10 @@ def handle_webhook_chunked_route():
         storage_client.upload_parquet_chunks(stream, arquivo_nome, chunk_size)
         logger.info("Upload em chunks concluído com sucesso.")
 
-        return jsonify({"status": "Processamento concluído (chunks)"}), 200
+        logger.info(f"Arquivo {arquivo_nome} processado com sucesso.")
 
     except Exception as e:
-        logger.error(f"Erro interno: {e}", exc_info=True)
-        abort(500, description="Erro interno do servidor")
+        logger.error(f"Erro ao processar arquivo: {e}", exc_info=True)
+        # Aqui você pode adicionar a lógica para agendar uma nova tentativa
+        # ou tomar outras ações de recuperação, se necessário.
+        logger.error("Erro ao processar arquivo.")
