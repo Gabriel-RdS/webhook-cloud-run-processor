@@ -6,13 +6,18 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
 [![GCP Compatible](https://img.shields.io/badge/GCP-Cloud_Run%20%7C%20Secret_Manager%20%7C%20GCS-orange.svg)](https://cloud.google.com)
 
-## ✨ Funcionalidades Principais
+## Funcionalidades Principais
 - **Processamento Seguro de Webhooks**
   - Validação de IPs permitidos via lista configurável
   - Autenticação via token da API Insider (armazenado no Secret Manager)
 - **Upload Automático para GCS**
   - Detecção automática de tipo MIME
   - Nomenclatura única para arquivos com UUID
+  - Organização por data no GCS
+- **Processamento em Chunks**
+  - Suporte para arquivos grandes com processamento em chunks
+- **Auditoria e Depuração**
+  - Armazenamento das requisições no GCS para auditoria e depuração
 - **Monitoramento em Tempo Real**
   - Logging detalhado com dual output (console/arquivo)
   - Trackeamento de progresso de uploads grandes
@@ -20,13 +25,13 @@
   - Variáveis de ambiente para múltiplos ambientes
   - Healthcheck endpoint para monitoramento
 
-## 🛠 Tecnologias Utilizadas
+## Tecnologias Utilizadas
 - **Core**: Python 3.11, Flask 2.x
 - **GCP**: Cloud Run, Secret Manager, Cloud Storage
 - **Segurança**: Validação de IP, Content-Type restrictions
 - **DevOps**: Docker (implícito no Cloud Run), GitHub Actions
 
-## 📦 Estrutura do Projeto
+## Estrutura do Projeto
 ```
 .
 ├── app/
@@ -43,7 +48,7 @@
 └── README.md           # Este arquivo
 ```
 
-## ⚙️ Configuração
+## Configuração
 
 ### Variáveis de Ambiente
 Crie um arquivo `.env` baseado no `.env.example`:
@@ -52,6 +57,7 @@ Crie um arquivo `.env` baseado no `.env.example`:
 BUCKET_NAME="seu-bucket-gcs"
 PROJECT_ID="projeto-gcp"
 ALLOWED_IPS="127.0.0.1,34.122.0.0/20"  # IPs autorizados
+INSIDER_API_TOKEN="configure-no-secret-manager" #Obrigatório configurar no Secret Manager
 
 # Secrets (gerados via Secret Manager)
 INSIDER_API_TOKEN_SECRET="nome-do-secret"
@@ -77,7 +83,7 @@ pip install -r requirements.txt
 ENVIRONMENT=development python app.py
 ```
 
-## 🌐 Deployment no Cloud Run
+## Deployment no Cloud Run
 ```
 # Build e deploy via gcloud CLI
 gcloud run deploy webhook-processor \
@@ -88,31 +94,38 @@ gcloud run deploy webhook-processor \
 ```
 
 **Endpoints:**
-- `POST /`: Processamento principal de webhooks
+- `POST /webhook_stream`: Processamento principal de webhooks (streams)
+- `POST /webhook_chunked`: Processamento de webhooks em chunks
 - `GET /healthcheck`: Status do serviço (200 OK)
 
-## 🧪 Testando a API
+## Testando a API
 ```
-# Exemplo de requisição
-curl -X POST http://localhost:8080 \
+# Exemplo de requisição (stream)
+curl -X POST http://localhost:8080/webhook_stream \
   -H "Content-Type: application/json" \
   -d '{"url": "https://exemplo.com/arquivo.parquet"}'
+
+# Exemplo de requisição (chunks)
+curl -X POST http://localhost:8080/webhook_chunked \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://exemplo.com/arquivo_grande.parquet"}'
 ```
 
-## 🤝 Como Contribuir
+## Como Contribuir
 1. Faça um fork do projeto
 2. Crie sua feature branch (`git checkout -b feature/nova-funcionalidade`)
 3. Commit suas mudanças (`git commit -am 'Adiciona nova funcionalidade'`)
 4. Push para a branch (`git push origin feature/nova-funcionalidade`)
 5. Abra um Pull Request
 
-## 📄 Licença
+## Licença
 Distribuído sob licença Apache 2.0. Veja `LICENSE` para mais informações.
 
-## 🚨 Troubleshooting
+## Troubleshooting
 Problemas comuns e soluções:
 - **Erro 403 (Acesso negado)**: Verifique ALLOWED_IPS e X-Forwarded-For
 - **Falha no upload**: Valide permissões do service account no GCS
+- **Falha no processamento em chunks**: Verifique o tamanho dos chunks e a disponibilidade do arquivo remoto
 - **Logs incompletos**: Configure ENVIRONMENT=development para logging em arquivo
 
 > [!TIP]
