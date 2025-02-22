@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  webhook:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+      - ./credentials:/app/credentials:ro  # Read-only para credenciais
+    environment:
+      - BUCKET_NAME=${BUCKET_NAME}
+      - PROJECT_ID=${PROJECT_ID}
+      - ALLOWED_IPS=${ALLOWED_IPS}
+      - ENVIRONMENT=development
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/sa.json
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
