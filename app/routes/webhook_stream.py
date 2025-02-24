@@ -1,7 +1,7 @@
 import uuid
 import threading
-import json
 import datetime
+from app.utils.monitoring import Monitoring
 from typing import Optional
 from flask import Blueprint, request, jsonify
 from werkzeug.exceptions import abort
@@ -13,6 +13,7 @@ from app.utils.logging import logger
 from app.utils.webhook_utils import save_request_to_gcs
 
 webhook_stream_bp = Blueprint('webhook_stream', __name__)
+monitor = Monitoring()
 
 @webhook_stream_bp.before_request
 def restrict_ip():
@@ -79,16 +80,14 @@ def process_file(payload, file_uuid):
         extension = get_file_extension(content_type)
         now = datetime.datetime.now()
         arquivo_nome = f"staging/insider/{now.year}/{now.month:02}/{now.day:02}/secured_export_{file_uuid}.{extension}"
-        # Defina um chunk size apropriado, se necessário
         chunk_size = 256 * 1024 * 1024  # ex: 256MB
   
         logger.info(f"Iniciando upload para o GCS em chunks em {arquivo_nome}")
-  
-        # Se a sua aplicação faz upload em chunks via um método específico (como upload_parquet_chunks), use-o
-        # Caso contrário, pode ser um upload normal
         stream = get_stream(response, content_type, total_size)
         storage_client.upload_stream(stream, arquivo_nome)
         logger.info("Upload concluído com sucesso.")
+        monitor.send_success_message(file_uuid, arquivo_nome)
   
     except Exception as e:
         logger.error(f"Erro ao processar arquivo: {e}", exc_info=True)
+        monitor.send_failure_message(file_uuid, "N/D", str(e))

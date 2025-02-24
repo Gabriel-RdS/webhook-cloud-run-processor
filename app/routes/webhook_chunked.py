@@ -1,7 +1,6 @@
 import uuid
 import datetime
 import threading
-import json
 from typing import Optional
 from flask import Blueprint, request, jsonify
 from werkzeug.exceptions import abort
@@ -10,8 +9,10 @@ from app.utils.logging import logger
 from app.storage.gcs_client import GoogleCloudStorage
 from app.services.file_downloader import safe_download, LoggingStreamWrapper, get_file_extension
 from app.utils.webhook_utils import save_request_to_gcs
+from app.utils.monitoring import Monitoring
 
 webhook_chunked_bp = Blueprint('webhook_chunked', __name__)
+monitor = Monitoring()
 
 @webhook_chunked_bp.before_request
 def restrict_ip():
@@ -77,9 +78,9 @@ def process_file(payload, file_uuid):
         logger.info("Upload em chunks concluído com sucesso.")
 
         logger.info(f"Arquivo {arquivo_nome} processado com sucesso.")
+        monitor.send_success_message(file_uuid, arquivo_nome)
 
     except Exception as e:
         logger.error(f"Erro ao processar arquivo: {e}", exc_info=True)
-        # Aqui você pode adicionar a lógica para agendar uma nova tentativa
-        # ou tomar outras ações de recuperação, se necessário.
         logger.error("Erro ao processar arquivo.")
+        monitor.send_failure_message(file_uuid, "N/D", str(e))
