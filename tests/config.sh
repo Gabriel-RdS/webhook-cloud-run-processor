@@ -7,6 +7,7 @@ app/services/file_downloader.py
 app/utils/__init__.py
 app/utils/logging.py
 app/utils/security.py
+app/utils/webhook_utils.py
 
 app/routes/__init__.py
 app/routes/webhook_stream.py

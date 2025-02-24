@@ -1,3 +1,7 @@
+import uuid
+import threading
+import json
+import datetime
 from typing import Optional
 from flask import Blueprint, request, jsonify
 from werkzeug.exceptions import abort
@@ -6,10 +10,7 @@ from app.config import Config
 from app.storage.gcs_client import GoogleCloudStorage
 from app.services.file_downloader import safe_download, get_file_extension
 from app.utils.logging import logger
-import uuid
-import threading
-import json
-import datetime
+from app.utils.webhook_utils import save_request_to_gcs
 
 webhook_stream_bp = Blueprint('webhook_stream', __name__)
 
@@ -49,22 +50,6 @@ def handle_webhook_stream_route():
     except Exception as e:
         logger.error(f"Erro ao processar a requisição: {e}", exc_info=True)
         abort(500, description="Erro interno do servidor")
-
-def save_request_to_gcs(payload, file_uuid):
-    try:
-        storage_client = GoogleCloudStorage()
-        now = datetime.datetime.now()
-        request_filename = f"staging/insider/requests/{now.year}/{now.month:02}/{now.day:02}/request_{file_uuid}.json"
-  
-        # Converter o payload para JSON
-        request_data = json.dumps(payload, indent=2)
-  
-        # Fazer upload do JSON para o GCS
-        storage_client.upload_string(request_data, request_filename, content_type='application/json')
-        logger.info(f"Requisição salva em {request_filename}")
-  
-    except Exception as e:
-        logger.error(f"Erro ao salvar requisição no GCS: {e}", exc_info=True)
 
 def get_stream(response, content_type: str, total_size: Optional[int]):
     """Centraliza a criação do stream com tratamento adequado"""

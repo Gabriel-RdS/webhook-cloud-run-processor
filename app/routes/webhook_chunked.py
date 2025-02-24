@@ -1,14 +1,15 @@
-from typing import Optional
-from flask import Blueprint, request, jsonify
-from werkzeug.exceptions import abort
-from app.config import Config
-from app.storage.gcs_client import GoogleCloudStorage
-from app.services.file_downloader import safe_download, LoggingStreamWrapper, get_file_extension
-from app.utils.logging import logger
 import uuid
 import datetime
 import threading
 import json
+from typing import Optional
+from flask import Blueprint, request, jsonify
+from werkzeug.exceptions import abort
+from app.config import Config
+from app.utils.logging import logger
+from app.storage.gcs_client import GoogleCloudStorage
+from app.services.file_downloader import safe_download, LoggingStreamWrapper, get_file_extension
+from app.utils.webhook_utils import save_request_to_gcs
 
 webhook_chunked_bp = Blueprint('webhook_chunked', __name__)
 
@@ -48,23 +49,6 @@ def handle_webhook_chunked_route():
     except Exception as e:
         logger.error(f"Erro ao receber requisição: {e}", exc_info=True)
         abort(500, description="Erro ao receber requisição")
-
-def save_request_to_gcs(payload, file_uuid):
-    """Salva os detalhes da requisição no GCS."""
-    try:
-        storage_client = GoogleCloudStorage()
-        now = datetime.datetime.now()
-        request_filename = f"staging/insider/requests/{now.year}/{now.month:02}/{now.day:02}/request_{file_uuid}.json"
-
-        # Converter o payload para JSON
-        request_data = json.dumps(payload, indent=2)
-
-        # Fazer upload do JSON para o GCS
-        storage_client.upload_string(request_data, request_filename, content_type='application/json')
-        logger.info(f"Requisição salva em {request_filename}")
-
-    except Exception as e:
-        logger.error(f"Erro ao salvar requisição no GCS: {e}", exc_info=True)
 
 def process_file(payload, file_uuid):
     """Função para processar o arquivo em segundo plano."""
