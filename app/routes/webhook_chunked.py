@@ -52,7 +52,7 @@ def handle_webhook_chunked_route():
         abort(500, description="Erro ao receber requisição")
 
 def process_file(payload, file_uuid):
-    """Função para processar o arquivo em segundo plano."""
+    """Processa o arquivo em chunks usando streaming para evitar sobrecarga de memória."""
     try:
         storage_client = GoogleCloudStorage()
         url = payload["url"]
@@ -70,12 +70,28 @@ def process_file(payload, file_uuid):
         extension = get_file_extension(content_type)
         now = datetime.datetime.now()
         arquivo_nome = f"staging/insider/{now.year}/{now.month:02}/{now.day:02}/secured_export_{file_uuid}.{extension}"
-        chunk_size = 256 * 1024 * 1024  # 256MB
+        
+        # Tamanho do chunk otimizado para memória (reduzido para 16MB)
+        chunk_size = 16 * 1024 * 1024
 
         logger.info(f"Iniciando upload para o GCS em chunks em {arquivo_nome}")
-        stream = LoggingStreamWrapper(response.raw, total_size, logger)
-        storage_client.upload_parquet_chunks(stream, arquivo_nome, chunk_size)
-        logger.info("Upload em chunks concluído com sucesso.")
+        
+        # Inicializa o upload em chunks para o GCS
+        bucket = storage_client.bucket
+        blob = bucket.blob(arquivo_nome)
+        
+        # Configura o upload em chunks
+        with blob.open('wb') as f:
+            bytes_processed = 0
+            for chunk in response.iter_content(chunk_size=chunk_size):
+                if chunk:
+                    f.write(chunk)
+                    bytes_processed += len(chunk)
+                    if total_size:
+                        progress = (bytes_processed / total_size) * 100
+                        logger.info(f"Progresso: {progress:.2f}% ({bytes_processed}/{total_size} bytes)")
+                    else:
+                        logger.info(f"Bytes processados: {bytes_processed}")
 
         logger.info(f"Arquivo {arquivo_nome} processado com sucesso.")
         monitor.send_success_message(file_uuid, arquivo_nome)
