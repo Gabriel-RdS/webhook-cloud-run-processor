@@ -5,6 +5,9 @@ env/
 pip-selfcheck.json
 *.pyvenv.cfg
 
+# Request
+docs/request.bash
+
 # Arquivos do Python
 __pycache__/
 *.py[cod]

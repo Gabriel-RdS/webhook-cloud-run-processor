@@ -4,7 +4,7 @@ curl --location --request POST 'https://unification.useinsider.com/api/raw/v1/ex
 --header 'Content-Type: application/json' \
 --data-raw '{
    "segment": {
-        "segment_id": 123456789
+        "segment_id": 1953317
     },
    "attributes":[
       "*"
