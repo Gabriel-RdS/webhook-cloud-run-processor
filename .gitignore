@@ -1,12 +1,14 @@
+# Request
+docs/requests_ayabooks.bash
+docs/ayabooks_events.json
+docs/requests_exatecnologia.bash
+
 # Ambiente virtual e dependências
 venv/
 .venv/
 env/
 pip-selfcheck.json
 *.pyvenv.cfg
-
-# Request
-docs/requests.bash
 
 # Arquivos do Python
 __pycache__/

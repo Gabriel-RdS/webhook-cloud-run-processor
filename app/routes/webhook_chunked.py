@@ -1,7 +1,6 @@
 import uuid
 import datetime
 import threading
-from typing import Optional
 from flask import Blueprint, request, jsonify
 from werkzeug.exceptions import abort
 from app.config import Config
@@ -10,6 +9,7 @@ from app.storage.gcs_client import GoogleCloudStorage
 from app.services.file_downloader import safe_download, LoggingStreamWrapper, get_file_extension
 from app.utils.webhook_utils import save_request_to_gcs
 from app.utils.monitoring import Monitoring
+from app.utils.constants import Segment
 
 webhook_chunked_bp = Blueprint('webhook_chunked', __name__)
 monitor = Monitoring()
@@ -22,42 +22,40 @@ def restrict_ip():
         logger.error(f"IP não autorizado: {ip}")
         abort(403, description="Acesso negado")
 
-@webhook_chunked_bp.route("/webhook_chunked", methods=["POST"])
-def handle_webhook_chunked_route():
+@webhook_chunked_bp.route("/webhook_chunked/<segment>", methods=["POST"])
+def handle_webhook_chunked_route(segment: str):
+    if not Segment.is_valid(segment):
+        logger.error(f"Segmento não autorizado: {segment}")
+        abort(400, description="Segmento não autorizado")
+
     payload = request.get_json(silent=True) or {}
     if not payload.get("url"):
         logger.error("Requisição sem URL válida")
         abort(400, description="Parâmetro URL ausente")
 
     try:
-        logger.info("Requisição recebida para processamento em chunks.")
+        logger.info(f"Requisição recebida para processamento em chunks para {segment}.")
 
-        # Gerar UUID para rastreamento
         file_uuid = uuid.uuid4().hex
+        save_request_to_gcs(payload, file_uuid, segment)
 
-        # Salvar a requisição no GCS
-        save_request_to_gcs(payload, file_uuid)
-
-        # Retornar a resposta "202 Accepted"
         response = jsonify({"status": "Processamento iniciado em segundo plano"})
         response.status_code = 202
 
-        # Iniciar o processamento em segundo plano
-        threading.Thread(target=process_file, args=(payload, file_uuid)).start()
+        threading.Thread(target=process_file, args=(payload, file_uuid, segment)).start()
 
         return response
 
     except Exception as e:
-        logger.error(f"Erro ao receber requisição: {e}", exc_info=True)
-        abort(500, description="Erro ao receber requisição")
+        logger.error(f"Erro ao processar a requisição: {e}", exc_info=True)
+        abort(500, description="Erro interno do servidor")
 
-def process_file(payload, file_uuid):
-    """Processa o arquivo em chunks usando streaming para evitar sobrecarga de memória."""
+def process_file(payload, file_uuid, segment):
     try:
         storage_client = GoogleCloudStorage()
         url = payload["url"]
 
-        logger.info(f"Iniciando download do arquivo em chunks: {url}")
+        logger.info(f"Iniciando download do arquivo: {url}")
         response = safe_download(url)
 
         content_type = response.headers.get("Content-Type")
@@ -69,10 +67,9 @@ def process_file(payload, file_uuid):
 
         extension = get_file_extension(content_type)
         now = datetime.datetime.now()
-        arquivo_nome = f"staging/insider/{now.year}/{now.month:02}/{now.day:02}/secured_export_{file_uuid}.{extension}"
         
-        # Tamanho do chunk otimizado para memória (reduzido para 16MB)
-        chunk_size = 16 * 1024 * 1024
+        base_path = Segment.get_base_path(segment)
+        arquivo_nome = f"{base_path}/{now.year}/{now.month:02}/{now.day:02}/secured_export_{file_uuid}.{extension}"
 
         logger.info(f"Iniciando upload para o GCS em chunks em {arquivo_nome}")
         
@@ -81,6 +78,7 @@ def process_file(payload, file_uuid):
         blob = bucket.blob(arquivo_nome)
         
         # Configura o upload em chunks
+        chunk_size = 16 * 1024 * 1024  # 16MB chunks
         with blob.open('wb') as f:
             bytes_processed = 0
             for chunk in response.iter_content(chunk_size=chunk_size):
@@ -98,5 +96,4 @@ def process_file(payload, file_uuid):
 
     except Exception as e:
         logger.error(f"Erro ao processar arquivo: {e}", exc_info=True)
-        logger.error("Erro ao processar arquivo.")
         monitor.send_failure_message(file_uuid, "N/D", str(e))

@@ -2,15 +2,17 @@ import json
 import datetime
 from app.storage.gcs_client import GoogleCloudStorage
 from app.utils.logging import logger
+from app.utils.constants import Segment
 
-def save_request_to_gcs(payload, file_uuid):
+def save_request_to_gcs(payload, file_uuid, segment):
     """
     Salva os detalhes da requisição no GCS em uma estrutura organizada por data.
     """
     try:
         storage_client = GoogleCloudStorage()
         now = datetime.datetime.now()
-        request_filename = f"staging/insider/requests/{now.year}/{now.month:02}/{now.day:02}/request_{file_uuid}.json"
+        base_path = Segment.get_base_path(segment)
+        request_filename = f"{base_path}/requests/{now.year}/{now.month:02}/{now.day:02}/request_{file_uuid}.json"
   
         # Converter o payload para JSON com formatação amigável
         request_data = json.dumps(payload, indent=2)
