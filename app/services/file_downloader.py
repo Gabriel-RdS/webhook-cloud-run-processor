@@ -37,7 +37,9 @@ def safe_download(file_url: str) -> requests.Response:
         
         valid_content_types = [
             "application/octet-stream",
+            "binary/octet-stream",  # Adicionado novo tipo MIME
             "application/parquet",
+            "application/x-parquet",  # Adicionado para .pq
             "text/csv",
             "application/json",
             "application/x-json",
@@ -47,9 +49,13 @@ def safe_download(file_url: str) -> requests.Response:
             "application/x-gzip"
         ]
         
-        if response.headers.get("Content-Type") not in valid_content_types:
-            logger.error("Tipo de arquivo inválido")
-            abort(400, description="Tipo de arquivo não suportado")
+        content_type = response.headers.get("Content-Type", "").lower()
+        if content_type not in valid_content_types:
+            # Log mais detalhado para debug
+            logger.error(f"Tipo de arquivo inválido: {content_type}")
+            logger.info(f"URL: {file_url}")
+            logger.info(f"Headers recebidos: {dict(response.headers)}")
+            abort(400, description=f"Tipo de arquivo não suportado: {content_type}")
             
         return response
     except requests.RequestException as e:
@@ -59,6 +65,8 @@ def safe_download(file_url: str) -> requests.Response:
 def get_file_extension(content_type: str) -> str:
     content_type_mapping = {
         "application/parquet": "parquet",
+        "application/x-parquet": "pq",  # Adicionado para .pq
+        "binary/octet-stream": "parquet",  # Adicionado novo mapeamento
         "text/csv": "csv",
         "application/json": "json",
         "application/x-json": "json",
@@ -68,4 +76,4 @@ def get_file_extension(content_type: str) -> str:
         "application/x-gzip": "gzip",
         "application/octet-stream": "parquet"
     }
-    return content_type_mapping.get(content_type, "parquet")
+    return content_type_mapping.get(content_type.lower(), "parquet")
